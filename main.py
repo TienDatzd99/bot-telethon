@@ -28,17 +28,29 @@ def debug_telethon():
 
 # API gửi tin nhắn Telegram
 @app.route('/send_telegram', methods=['POST'])  
-async def send_telegram():
+def send_telegram():
     data = request.get_json()
-    payment_code = data.get("payment_code")
+    payment_code = data.get("payment_code") if data else None
 
     if not payment_code:
         return jsonify({"status": "error", "message": "Thiếu payment_code"}), 400
 
     command = f"/confirm {payment_code}"
-    await client.send_message(BOT_USERNAME, command)
 
-    return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+    async def send_message():
+        await client.send_message(BOT_USERNAME, command)
+
+    try:
+        # Dùng event loop hiện tại thay vì tạo loop mới
+        loop = asyncio.get_running_loop()
+        loop.create_task(send_message())
+
+        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+    except RuntimeError:
+        # Nếu chưa có event loop, chạy bằng loop có sẵn
+        asyncio.run_coroutine_threadsafe(send_message(), loop)
+        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
