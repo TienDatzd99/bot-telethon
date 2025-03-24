@@ -6,49 +6,43 @@ import os
 app = Flask(__name__)
 
 # Thông tin tài khoản Telegram cá nhân
-API_ID = "29148352"  # Thay bằng api_id của bạn
-API_HASH = "16c771c16661f6a21a6ba57ce5cb3b51"  # Thay bằng api_hash của bạn
-PHONE_NUMBER = "+14106235803"  # Thay bằng số điện thoại (ví dụ: +84123456789)
-BOT_USERNAME = "@USDxchangebot"  # Thay bằng username bot
+API_ID = 29148352  
+API_HASH = "16c771c16661f6a21a6ba57ce5cb3b51"  
+PHONE_NUMBER = "+14106235803"  
+BOT_USERNAME = "@USDxchangebot"  
 
 # Khởi tạo Telethon client
 client = TelegramClient("user_session", API_ID, API_HASH)
-is_authenticated = False
+loop = asyncio.get_event_loop()
 
 # Hàm khởi động client
 async def start_client():
-    global is_authenticated
-    if not is_authenticated:
+    if not client.is_connected():
         await client.start(phone=PHONE_NUMBER)
-        is_authenticated = True
-        print("Đăng nhập Telegram thành công")
+        print("✅ Đăng nhập Telegram thành công")
 
-# API endpoint để nhận mã thanh toán và gửi tin nhắn
-@app.route('/send_telegram', methods=['GET', 'POST'])  # Bỏ async
+# API endpoint để gửi tin nhắn
+@app.route('/send_telegram', methods=['POST'])  
 def send_telegram():
-    print(f"Nhận yêu cầu: {request.method} với data: {request.get_json(silent=True) or request.args}")
+    print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
 
-    if request.method == 'POST':
-        data = request.get_json(silent=True)
-        payment_code = data.get("payment_code") if data else None
-    else:  # GET
-        payment_code = request.args.get("payment_code")
+    data = request.get_json()
+    payment_code = data.get("payment_code") if data else None
 
     if not payment_code:
-        return jsonify({"status": "error", "message": "Missing payment_code"}), 400
+        return jsonify({"status": "error", "message": "Thiếu payment_code"}), 400
 
     command = f"/confirm {payment_code}"
-    
-    if not is_authenticated:
-        asyncio.run(start_client())  # Chạy đồng bộ trong asyncio
 
-    try:
-        asyncio.run(client.send_message(BOT_USERNAME, command))  # Chạy đồng bộ
-        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    async def send_message():
+        await client.send_message(BOT_USERNAME, command)
+
+    # Gửi tin nhắn không đồng bộ
+    loop.create_task(send_message())
+
+    return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    asyncio.run(start_client())
+    loop.run_until_complete(start_client())  # Chạy client trước khi khởi động Flask
     app.run(host="0.0.0.0", port=port)
