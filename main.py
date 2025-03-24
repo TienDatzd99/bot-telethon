@@ -47,8 +47,6 @@ def debug_telethon():
         return jsonify({"error": str(e)}), 500
 @app.route('/send_telegram', methods=['POST'])  
 def send_telegram():
-    print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
-
     data = request.get_json()
     payment_code = data.get("payment_code") if data else None
 
@@ -60,10 +58,35 @@ def send_telegram():
     async def send_message():
         await client.send_message(BOT_USERNAME, command)
 
-    # Gửi tin nhắn không đồng bộ
-    loop.create_task(send_message())
+    try:
+        # Tạo event loop nếu chưa có
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(send_message())
+        else:
+            asyncio.run(send_message())  # Chạy đồng bộ nếu loop chưa chạy
 
-    return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+# def send_telegram():
+#     print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
+
+#     data = request.get_json()
+#     payment_code = data.get("payment_code") if data else None
+
+#     if not payment_code:
+#         return jsonify({"status": "error", "message": "Thiếu payment_code"}), 400
+
+#     command = f"/confirm {payment_code}"
+
+#     async def send_message():
+#         await client.send_message(BOT_USERNAME, command)
+
+#     # Gửi tin nhắn không đồng bộ
+#     loop.create_task(send_message())
+
+#     return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
