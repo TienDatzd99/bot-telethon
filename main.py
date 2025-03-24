@@ -24,10 +24,17 @@ async def start_client():
         print("Đăng nhập Telegram thành công")
 
 # API endpoint để nhận mã thanh toán và gửi tin nhắn
-@app.route('/send_telegram', methods=['POST'])
+@app.route('/send_telegram', methods=['GET', 'POST'])
 async def send_telegram():
-    data = request.get_json()
-    payment_code = data.get("payment_code")
+    # Log để debug
+    print(f"Nhận yêu cầu: {request.method} với data: {request.get_json(silent=True) or request.args}")
+
+    # Lấy payment_code từ JSON (POST) hoặc query string (GET)
+    if request.method == 'POST':
+        data = request.get_json(silent=True)
+        payment_code = data.get("payment_code") if data else None
+    else:  # GET
+        payment_code = request.args.get("payment_code")
 
     if not payment_code:
         return jsonify({"status": "error", "message": "Missing payment_code"}), 400
@@ -48,6 +55,5 @@ async def send_telegram():
 # Khởi động Flask server
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    # Chạy client trong asyncio loop
     asyncio.run(start_client())
     app.run(host="0.0.0.0", port=port)
