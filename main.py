@@ -22,13 +22,15 @@ async def start_client():
         print("✅ Đăng nhập Telegram thành công")
 
 # API endpoint để gửi tin nhắn
-@app.route('/send_telegram', methods=['POST'])  
+@app.route('/debug_telethon', methods=['GET'])
 def debug_telethon():
-    try:
-        is_connected = client.is_connected()
-        return jsonify({"status": "success", "connected": is_connected}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({
+        "is_connected": client.is_connected(),
+        "session": str(client.session),
+        "event_loop_running": asyncio.get_event_loop().is_running()
+    })
+
+@app.route('/send_telegram', methods=['POST'])  
 def send_telegram():
     print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
 
