@@ -24,12 +24,27 @@ async def start_client():
 # API endpoint để gửi tin nhắn
 @app.route('/debug_telethon', methods=['GET'])
 def debug_telethon():
-    return jsonify({
-        "is_connected": client.is_connected(),
-        "session": str(client.session),
-        "event_loop_running": asyncio.get_event_loop().is_running()
-    })
+    try:
+        is_connected = client.is_connected()
+        session_info = str(client.session)
 
+        # Kiểm tra hoặc tạo event loop mới
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        loop_running = loop.is_running()
+
+        return jsonify({
+            "is_connected": is_connected,
+            "session": session_info,
+            "event_loop_running": loop_running
+        })
+    except Exception as e:
+        print(f"Lỗi debug_telethon: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 @app.route('/send_telegram', methods=['POST'])  
 def send_telegram():
     print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
