@@ -23,6 +23,12 @@ async def start_client():
 
 # API endpoint để gửi tin nhắn
 @app.route('/send_telegram', methods=['POST'])  
+def debug_telethon():
+    try:
+        is_connected = client.is_connected()
+        return jsonify({"status": "success", "connected": is_connected}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 def send_telegram():
     print(f"Nhận yêu cầu: {request.method} với data: {request.get_json()}")
 
