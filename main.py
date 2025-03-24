@@ -41,16 +41,15 @@ def send_telegram():
         await client.send_message(BOT_USERNAME, command)
 
     try:
-        # Dùng event loop hiện tại thay vì tạo loop mới
-        loop = asyncio.get_running_loop()
-        loop.create_task(send_message())
-
-        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+        loop = asyncio.get_event_loop()
     except RuntimeError:
-        # Nếu chưa có event loop, chạy bằng loop có sẵn
-        asyncio.run_coroutine_threadsafe(send_message(), loop)
-        return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
+    future = asyncio.run_coroutine_threadsafe(send_message(), loop)
+    future.result()  # Chờ coroutine hoàn thành
+
+    return jsonify({"status": "success", "message": f"Sent: {command}"}), 200
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
